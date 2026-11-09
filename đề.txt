@@ -1,0 +1,9 @@
+Task: Regression
+Datasets: Jena Climate
+Objective: Weather Forecasting
+Exercises: Sequence-to-Sequence Weather Forecasting
+ Goal: Predict temperature sequences for upcoming days.
+ Dataset: Jena Climate Dataset
+ Model: Encoder–Decoder LSTM
+ Task Type: Regression (multi-step)
+ Extension: Add attention mechanism; compare against Transformer.

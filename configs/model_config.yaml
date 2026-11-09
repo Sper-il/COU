@@ -1,0 +1,23 @@
+# Cấu hình mô hình — 3 kiến trúc đúng đề
+baseline:
+  type: "lstm_s2s"
+  input_dim: 15        # F = 15 sau khi tách wd thành sin/cos (chốt từ EDA)
+  hidden_dim: 128
+  num_layers: 2
+  dropout: 0.1
+  pred_len: 144
+attention:
+  type: "bahdanau"
+  input_dim: 15
+  hidden_dim: 128
+  num_layers: 2
+  dropout: 0.1
+  pred_len: 144
+transformer:
+  type: "mini_transformer"
+  input_dim: 15
+  d_model: 64
+  nhead: 4
+  num_layers: 2
+  dropout: 0.1
+  pred_len: 144

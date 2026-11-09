@@ -1,0 +1,13 @@
+# Cấu hình huấn luyện — bản chạy tối thiểu tầm 144
+batch_size: 64
+epochs: 30
+lr: 0.001
+optimizer: "adam"
+weight_decay: 0.00001
+teacher_forcing: 0.5        # khởi đầu, giảm dần vì giải mã dài 144 bước
+teacher_forcing_decay: 0.98 # nhân sau mỗi epoch
+clip: 1.0
+early_stop: 5               # patience theo loss kiểm định
+seed: 42
+eval_horizons: [1, 24, 72, 144]
+baseline: "persistence"

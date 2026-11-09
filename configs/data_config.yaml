@@ -1,0 +1,35 @@
+# Cấu hình dữ liệu — nguồn đúng duy nhất cho EDA và DataLoader
+data_path: "data/raw/jena_climate_2009_2016.csv/jena_climate_2009_2016.csv"
+datetime_col: "Date Time"
+datetime_format: "%d.%m.%Y %H:%M:%S"  # định dạng ngày-tháng-năm của trạm Jena
+target_col: "T (degC)"
+feature_cols_original:
+  - "p (mbar)"
+  - "T (degC)"
+  - "Tpot (K)"
+  - "Tdew (degC)"
+  - "rh (%)"
+  - "VPmax (mbar)"
+  - "VPact (mbar)"
+  - "VPdef (mbar)"
+  - "sh (g/kg)"
+  - "H2OC (mmol/mol)"
+  - "rho (g/m**3)"
+  - "wv (m/s)"
+  - "max. wv (m/s)"
+  - "wd (deg)"
+sentinel_value: -9999  # mã thiếu của Jena, chỉ xuất hiện ở wv / max. wv
+wind_col: "wd (deg)"
+wind_encoding: "sin_cos"  # chốt sau EDA: tách wd -> wd_sin, wd_cos => F = 15
+input_len: 144   # 1 ngày quá khứ (144 bước x 10 phút)
+pred_len: 144    # 1 ngày tương lai
+stride_train: 12   # 2 giờ, tạo ~35.000 cửa sổ huấn luyện
+stride_eval: 144   # 1 ngày, không chồng lấn khi đánh giá
+split:
+  train: [2009, 2010, 2011, 2012, 2013, 2014]
+  val: [2015]
+  test: [2016]
+scaler: "standard"  # StandardScaler, chỉ fit trên tập huấn luyện
+seed: 42
+batch_size: 64
+num_workers: 0

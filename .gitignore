@@ -1,0 +1,11 @@
+# Dữ liệu lớn và kết quả chạy — không commit
+data/processed/
+data/splits/
+results/runs/
+results/eda/
+models/checkpoints/*.pt
+models/trained/*.pt
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.venv/
