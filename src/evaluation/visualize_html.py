@@ -86,11 +86,21 @@ def build_report(run_dir: str) -> str:
     mae_h72 = metrics.get("mae_h72")
     mae_h144 = metrics.get("mae_h144")
     pers_mae = metrics.get("persistence_mae")
+    seasonal_mae = metrics.get("seasonal_naive_mae")
     latency = metrics.get("inference_latency_ms")
 
     # Kiểm tra Persistence
     pers_passed = (mae < pers_mae) if (mae is not None and pers_mae is not None) else None
     pers_badge = '<span class="badge badge-pass">🟢 ĐẠT (Vượt Baseline)</span>' if pers_passed else '<span class="badge badge-fail">🔴 KHÔNG ĐẠT</span>'
+
+    # Kiểm tra Seasonal-naive (y[t] = x[t], cùng giờ hôm qua)
+    seasonal_passed = (
+        (mae < seasonal_mae) if (mae is not None and seasonal_mae is not None) else None
+    )
+    seasonal_badge = (
+        '<span class="badge badge-pass">🟢 ĐẠT (Vượt Baseline)</span>'
+        if seasonal_passed else '<span class="badge badge-fail">🔴 KHÔNG ĐẠT</span>'
+    )
 
     # Bảng so sánh 3 mô hình nếu có trong metrics
     comparisons = metrics.get("comparison", [])
@@ -263,8 +273,14 @@ def build_report(run_dir: str) -> str:
                     <tr>
                         <td><strong>Đường cơ sở Persistence (MAE)</strong></td>
                         <td>{f"{pers_mae:.3f} °C" if pers_mae is not None else "N/A"}</td>
-                        <td>Seq2Seq phải vượt Baseline (MAE < Persistence)</td>
+                        <td>Seq2Seq phải vượt Baseline (MAE &lt; Persistence)</td>
                         <td>{pers_badge}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Đường cơ sở Seasonal-naive (MAE)</strong></td>
+                        <td>{f"{seasonal_mae:.3f} °C" if seasonal_mae is not None else "N/A"}</td>
+                        <td>Neo cùng giờ hôm qua y[t] = x[t]; Seq2Seq phải vượt</td>
+                        <td>{seasonal_badge}</td>
                     </tr>
                 </tbody>
             </table>

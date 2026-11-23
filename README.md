@@ -84,9 +84,36 @@ python notebooks/2026-11-03_eda.py
 python -m src.evaluation.visualize_eda_html
 # → results/eda/eda_report.html
 
-# 6. Test (khi có tests ở giai đoạn Data)
+# 6. Kiểm thử nhanh module mô hình trên dữ liệu Jena thật (1 lệnh, vài phút)
+python -m src.models.smoke_test
+# → in shape, MAE (°C gốc) so với persistence/seasonal-naive, loss, độ trễ suy luận
+
+# 7. Test (khi có tests ở giai đoạn Data)
 pytest -q
 ```
+
+## 6.1. Module Mô hình (`src/models`) — Bước 4
+
+Ba kiến trúc đúng đề, cùng dùng chung dạng đầu ra **neo theo cùng giờ + phần dư**
+(`y_t = w_t·x[t] + (1−w_t)·x[143] + Δ_t`, với `w_t = sigmoid(gate_t)` học được):
+
+| Kiến trúc | Tham số | Checkpoint | Độ trễ suy luận (CPU) |
+|-----------|---------|-----------|------------------------|
+| `LSTMS2S` — Encoder–Decoder LSTM cơ sở (**Must**) | 471.825 | ~1,80 MB | ~73 ms/mẫu |
+| `LSTMS2SAttention` — + Attention Bahdanau (**Should**) | 504.849 | ~1,93 MB | ~90 ms/mẫu |
+| `MiniTransformer` — Transformer mini encoder-only (**Should**) | 105.489 | ~0,90 MB | ~3 ms/mẫu |
+
+Chữ ký thống nhất:
+
+```python
+forward(x: (B, 144, 15), y_in: (B, 144) | None,
+        teacher_forcing_ratio: float = 0.0) -> (B, 144)
+```
+
+* Lúc **huấn luyện**: `y_in` là mục tiêu *dịch phải 1 bước*.
+* Lúc **suy luận**: `y_in = None` → bộ giải mã tự hồi tiếp đủ 144 bước.
+
+Kiểm thử: `pytest tests/unit/test_models.py -q` → 13 passed; `pytest -q` → 25 passed.
 
 ## 7. Example Input → Output
 
@@ -129,11 +156,10 @@ Kết quả huấn luyện sẽ ghi vào `results/runs/<timestamp>/metrics.json`
 - Có 1 khoảng trống 3 ngày trong tập kiểm thử 10/2016 — các cửa sổ trượt cắt qua đoạn này phải loại bỏ khi tạo `src/data`.
 - Biến `Tpot` tương quan 0,997 với `T` — nguy cơ mô hình ỷ lại một biến; cần kiểm tra ablation khi đánh giá.
 - EDA mới dừng ở thống kê mô tả, chưa đo MAE theo tầm cho từng mùa — để dành cho `report.html` sau huấn luyện.
-- Chưa có mã `src/data`, `src/models`, `src/training` — mới xong giai đoạn dựng khung và EDA.
+- Huấn luyện đầy đủ (30 epoch × 3 kiến trúc) **chưa chạy** — mô hình mới dừng ở mức kiểm thử nhanh (`python -m src.models.smoke_test`). Các chỉ số MAE/RMSE trong `results/runs/` hiện thuộc lượt chạy thử, không phải kết quả cuối.
 
 ## 10. Future Improvements
 
-- Cài đặt `src/data` với kiểm thử đơn vị về shape `(144,15)/(144,)`, chống rò rỉ scaler và chia thời gian.
 - Huấn luyện LSTM Encoder–Decoder cơ sở tầm 144, đối sánh với mốc persistence 2,806 °C.
 - Mở rộng Attention Bahdanau và Transformer mini, báo cáo cùng bảng MAE tại 1/24/72/144.
 - Thử đa ngày `{288, 432}` và demo một lệnh ở mức Could.

@@ -1,7 +1,7 @@
 # Dự báo thời tiết Seq2Seq Jena — Tình trạng tiến độ
 
 > Nguồn đúng duy nhất cho **đang làm gì, tại sao, và đã làm được gì**.
-> Cập nhật lần cuối: 2026-11-09 (kiểm tra lại Bước 3, đồng bộ F = 15)
+> Cập nhật lần cuối: 2026-11-23 (chốt Bước 4 — Module Mô hình `src/models`)
 
 ## Đối chiếu với đề (khớp từng chữ)
 
@@ -42,11 +42,29 @@
 - Cột mốc: tuần 1 dựng khung và phân tích khám phá | tuần 2 dữ liệu | tuần 3 mô hình và huấn luyện (cơ sở rồi 2 mở rộng) | tuần 4 đánh giá, trực quan và tài liệu
 - Rủi ro kỹ thuật: rò rỉ do chia/chuẩn hóa sai; sai số tích lũy ở nửa sau ngày dự báo; huấn luyện chậm trên CPU vì chuỗi dài 144; quá khớp; nhiễu hướng gió dạng góc (bảng chi tiết trong `docs/design.md` mục 7)
 
-## Mô-đun đang làm: Mô hình `src/models` (kế tiếp)
+## Mô-đun đang làm: Huấn luyện `src/training` (kế tiếp — phần của người tiếp theo)
 
-- **Mô tả** — Cài đặt 3 kiến trúc đúng đề trong `src/models/architecture.py`: LSTM Encoder–Decoder cơ sở, kèm Attention Bahdanau, Transformer mini; hàm mất mát MSE trong `loss.py`
-- **Mục tiêu** — Cả 3 mô hình chạy `forward` `(B,144,15) → (B,144)` không lỗi trên CPU
-- **Trạng thái** — Mô tả ⏳ / Sinh mã ⏳ / Duyệt ⏳ / Chạy ⏳ / Kiểm thử ⏳ / Gọn mã ⏳ / Chốt ⏳
+- **Mô tả** — Vòng huấn luyện trong `src/training/trainer.py`: teacher forcing giảm dần về 0, cắt chuẩn gradient 1,0, dừng sớm patience 5, `ReduceLROnPlateau`, checkpoint `.pt` (`state_dict` + `model_config` + `epoch` + `val_loss` + `teacher_forcing`), ghi `results/runs/<ts>/logs.txt` + `history.json`
+- **Mục tiêu** — `train(config)` trả về đường dẫn checkpoint tốt nhất; chạy được trên CPU
+- **Trạng thái** — Mô tả ✅ / Sinh mã ✅ / Duyệt ✅ / Chạy ✅ / Kiểm thử ⏳ / Gọn mã ⏳ / Chốt ⏳
+- **Ghi chú** — Mã đã có sẵn và đã chạy thử 1 epoch (`smoke_lstm`, 337 s/epoch CPU). Việc còn lại là chạy đủ 30 epoch × 3 kiến trúc và đánh giá.
+
+## Mô-đun đã xong: Mô hình `src/models` (2026-11-23)
+
+- **Mô tả** — Cài đặt 3 kiến trúc đúng đề trong `src/models/architecture.py`: LSTM Encoder–Decoder cơ sở, kèm Attention Bahdanau, Transformer mini; hàm mất mát MSE trong `loss.py`; kiểm thử nhanh trên dữ liệu thật trong `smoke_test.py`
+- **Mục tiêu** — Cả 3 mô hình chạy `forward` `(B,144,15) → (B,144)` không lỗi trên CPU, đúng siêu tham số `configs/model_config.yaml`
+- **Quy trình** — `Kiến trúc chung (neo cùng giờ + phần dư) → forward có teacher forcing → kiểm thử nhanh trên dữ liệu Jena thật`
+- **Kế hoạch thử nghiệm (việc nhỏ)**
+  - [x] Viết `src/models/loss.py` (`mse_loss`, `mae_loss`, `masked_mse_loss`)
+  - [x] Viết `src/models/architecture.py` (`LSTMS2S`, `LSTMS2SAttention`, `MiniTransformer`, `build_model`)
+  - [x] Viết `tests/unit/test_models.py` (13 kiểm thử)
+  - [x] Viết `src/models/smoke_test.py` — kiểm thử nhanh trên dữ liệu thật, 1 lệnh
+  - [x] Sửa lỗi teacher forcing lệch 1 bước (off-by-one) — xem mục Nhật ký quyết định
+  - [x] Tối ưu Attention Bahdanau (chiếu encoder 1 lần) để đạt ngưỡng 100 ms/mẫu
+  - [x] Thống nhất dạng đầu ra cho cả 3 kiến trúc (để so sánh công bằng với Transformer)
+- **Trạng thái** — Mô tả ✅ / Sinh mã ✅ / Duyệt ✅ / Chạy ✅ / Kiểm thử ✅ / Gọn mã ✅ / Chốt ✅
+- **Lần chạy gần nhất** — 2026-11-23: `python -m src.models.smoke_test` → cả 3 kiến trúc OK trên dữ liệu Jena thật (shape `(8,144,15) → (8,144)`, loss MSE giảm, 0 giá trị ngoài biên vật lý, độ trễ suy luận LSTM 73 ms / Attention 90 ms / Transformer 3 ms); `pytest -q` → **25 passed**
+- **Số liệu mô hình** — tham số: LSTM 471.825 / Attention 504.849 / Transformer 105.489; checkpoint ước tính 1,80 / 1,93 / 0,90 MB (ngưỡng ≤ 50 MB)
 
 ## Mô-đun đã xong: Dữ liệu `src/data` (2026-11-08)
 
@@ -94,6 +112,7 @@
 | 1 | Dựng khung và EDA | 2026-11-03 | ✅ | — | `notebooks/2026-11-03_eda.py` → 6 PNG + `eda_summary.json`; chốt F=15, persistence 2,806 °C |
 | 2 | Visualize EDA HTML + bổ sung docs | 2026-11-03 | ✅ | — | `src/evaluation/visualize_eda_html.py` → `results/eda/eda_report.html` (~638 KB, offline); thêm README 10 mục, architecture, data-flow, api, data, AI_Usage, CHANGELOG |
 | 3 | Dữ liệu `src/data` | 2026-11-09 | ✅ | — | `transforms/split/dataset/__main__` + `tests/unit/test_dataset.py` (4 passed); train 26.192 mẫu, val 364, test 359; `scaler.pkl` + `splits.npz` (kiểm tra lại) |
+| 4 | Mô hình `src/models` | 2026-11-23 | ✅ | — | `architecture.py` (LSTMS2S / Attention Bahdanau / MiniTransformer) + `loss.py` + `smoke_test.py`; `tests/unit/test_models.py` (13 passed); `pytest -q` 25 passed; sửa lỗi teacher forcing off-by-one, tối ưu Attention (108,9 → 90,5 ms), thống nhất dạng đầu ra 3 kiến trúc |
 
 ## Nhật ký quyết định
 
@@ -108,6 +127,10 @@
 | 2026-11-03 | Đánh giá tại tầm 1/24/72/144 kèm persistence | Chỉ một số trung bình | Khớp Task Type multi-step, lộ sai số tích lũy cuối ngày |
 | 2026-11-03 | Chốt F = 15 (tách wd thành wd_sin/wd_cos) | Giữ 14 biến gốc | EDA chứng minh wd là biến vòng tròn đứt đoạn 0/360, tách sin/cos giữ tính liên tục |
 | 2026-11-03 | Mã thiếu -9999 ở wv/max.wv (38 dòng) nội suy tuyến tính | Xóa dòng | Chỉ 0,005% dữ liệu, xóa sẽ phá vỡ cửa sổ 144→144 liên tục |
+| 2026-11-23 | Sửa lỗi teacher forcing lệch 1 bước (off-by-one) trong `architecture.py` | Giữ nguyên, chấp nhận | Chuỗi teacher input cũ dài `T` và được tra đúng chỗ `t`, nên bộ giải mã ăn `y[:, t-2]` thay vì `y[:, t-1]`. Sai lệch này làm hiệu quả teacher forcing **không khớp** với lúc suy luận, đẩy MAE kiểm định lên ~3,6 °C. Sửa thành chuỗi dài `T+1` (`teacher_input[:, k] = y[:, k-1]`) và tra chỉ số `t+1` |
+| 2026-11-23 | Attention Bahdanau: chiếu `W_e * enc_out` **một lần** thay vì mỗi bước giải mã | Giữ cách tính lại mỗi bước | `enc_out` là hằng trong suốt 144 bước nên phép chiếu không đổi. Tối ưu này hạ độ trễ suy luận từ 108,9 ms (vượt ngưỡng 100 ms) xuống 90,5 ms, đạt ngưỡng nghiệm thu |
+| 2026-11-23 | Cả 3 kiến trúc (kể cả Transformer) dùng chung dạng đầu ra **neo cùng giờ + phần dư** | Transformer xuất thẳng giá trị | Đề yêu cầu "compare against Transformer" — nếu Transformer phải học từ đầu cả đường cong nhiệt độ trong khi LSTM đã có sẵn ưu thế cấu trúc, phép so sánh sẽ bất công. Thống nhất dạng đầu ra giúp bảng MAE 1/24/72/144 so sánh được |
+| 2026-11-23 | Bổ sung đường cơ sở **seasonal-naive** (`y[t] = x[t]`, cùng giờ hôm qua) vào bộ chỉ số | Chỉ so với persistence | Vì `input_len == pred_len == 144` và hai cửa sổ lệch đúng 24 giờ, `y[t]` xảy ra cùng giờ với `x[t]`, nên seasonal-naive là đường cơ sở mạnh hơn persistence (2,74 vs 3,21 °C trên 2011). Mô hình phải vượt **cả hai** mới được coi là có giá trị |
 
 ## Rủi ro và giảm thiểu
 

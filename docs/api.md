@@ -29,19 +29,42 @@ Chạy kiểm tra nhanh (sau khi cài đặt): `python -m src.data --config conf
 ```python
 # src/models/architecture.py
 class LSTMS2S(nn.Module):            # cơ sở mức Must, đúng Model trong đề
-    def forward(x: (B,144,15), y_in: (B,144) | None) -> (B,144): ...
+    def forward(x: (B,144,15), y_in: (B,144) | None,
+                teacher_forcing_ratio: float = 0.0) -> (B,144): ...
 
 class LSTMS2SAttention(nn.Module):   # mở rộng Attention Bahdanau
-    def forward(x: (B,144,15), y_in: (B,144) | None) -> (B,144): ...
+    def forward(x: (B,144,15), y_in: (B,144) | None,
+                teacher_forcing_ratio: float = 0.0) -> (B,144): ...
 
-class MiniTransformer(nn.Module):    # đối sánh Transformer mini (d_model=64, nhead=4, 2 lớp)
-    def forward(x: (B,144,15)) -> (B,144): ...
+class MiniTransformer(nn.Module):    # đối chiếu Transformer mini (d_model=64, nhead=4, 2 lớp)
+    def forward(x: (B,144,15), y_in: (B,144) | None,
+                teacher_forcing_ratio: float = 0.0) -> (B,144): ...
 
 # src/models/loss.py
 mse_loss(pred: (B,144), target: (B,144)) -> scalar  # MSE khi train
+mae_loss(pred: (B,144), target: (B,144)) -> scalar  # MAE để theo dõi trong log
+
+# src/models/architecture.py — factory
+build_model(arch: str, **kwargs) -> nn.Module
+#   arch: lstm_s2s | lstm_attention (bahdanau) | mini_transformer (transformer)
+#   Tham số không thuộc kiến trúc bị bỏ qua (vd hidden_dim với Transformer).
 ```
 
 Lúc inference `y_in = None` (decoder tự hồi tiếp 144 bước); lúc train `y_in` là target dịch phải 1 bước (teacher forcing).
+
+Cả 3 kiến trúc dùng chung dạng đầu ra **neo theo cùng giờ + phần dư**:
+`y_t = w_t*x[t] + (1-w_t)*x[143] + delta_t`, với `w_t = sigmoid(gate_t)` học được
+(`gate` khởi tạo thang tăng dần từ ~0,05 lên ~0,95 theo tầm dự báo).
+
+Kiểm thử nhanh trên dữ liệu Jena thật (1 lệnh, vài phút):
+
+```bash
+python -m src.models.smoke_test                      # cả 3 kiến trúc
+python -m src.models.smoke_test --arch lstm_s2s      # chỉ một kiến trúc
+```
+
+In ra: shape lô, số tham số, MAE (°C gốc) so với persistence và seasonal-naive,
+loss MSE trước/sau, độ trễ suy luận (ms/mẫu), số giá trị ngoài biên vật lý.
 
 ## 3. Huấn luyện — `src/training/`
 
