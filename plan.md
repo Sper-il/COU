@@ -3,7 +3,7 @@
 > Nguồn đối chiếu: `đề.txt` (9 dòng), `docs/define.md`, `docs/design.md`, `docs/description.md`,
 > `docs/api.md`, `docs/progress_status.md`, `configs/data_config.yaml`,
 > `configs/model_config.yaml`, `configs/train_config.yaml`.
-> Mọi số liệu dưới đây sao nguyên từ các tài liệu trên, không tự đặt số mới.
+> Mọi số liệu dưới đây sao nguyên từ các tài liệu trên, không tự đặt số mới
 
 ## 1. Bối cảnh chung
 
