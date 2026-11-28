@@ -1,7 +1,7 @@
 # Dự báo thời tiết Seq2Seq Jena — Tình trạng tiến độ
 
 > Nguồn đúng duy nhất cho **đang làm gì, tại sao, và đã làm được gì**.
-> Cập nhật lần cuối: 2026-11-23 (chốt Bước 4 — Module Mô hình `src/models`)
+> Cập nhật lần cuối: 2026-11-28 (thêm notebook Colab huấn luyện, chuẩn bị Bước 5)
 
 ## Đối chiếu với đề (khớp từng chữ)
 
@@ -41,6 +41,14 @@
 - Giao diện: `build_dataloaders(config) → {train,val,test}`; `LSTMS2S.forward(x, y_in) → (B,144)` với `x: (B,144,15)`; `train(config) → best_ckpt`; `evaluate(ckpt, loader) → {mae, rmse, mae_h1/h24/h72/h144, persistence_mae}`
 - Cột mốc: tuần 1 dựng khung và phân tích khám phá | tuần 2 dữ liệu | tuần 3 mô hình và huấn luyện (cơ sở rồi 2 mở rộng) | tuần 4 đánh giá, trực quan và tài liệu
 - Rủi ro kỹ thuật: rò rỉ do chia/chuẩn hóa sai; sai số tích lũy ở nửa sau ngày dự báo; huấn luyện chậm trên CPU vì chuỗi dài 144; quá khớp; nhiễu hướng gió dạng góc (bảng chi tiết trong `docs/design.md` mục 7)
+
+## Mô-đun đang làm: Huấn luyện trên GPU (notebook Colab)
+
+- **Mô tả** — `notebooks/colab_train.ipynb` (21 ô, sinh từ `notebooks/_nbcells/` bằng `notebooks/build_colab_notebook.py`): cài thư viện, clone repo, tải dữ liệu, kiểm tra tập, đường cơ sở, hàm huấn luyện, đánh giá, **sweep 9 cấu hình × 15 epoch**, **huấn luyện 30 epoch** với cấu hình tốt nhất, so sánh 3 kiến trúc, đo độ trễ, tổng kết, lưu Google Drive
+- **Mục tiêu** — Tìm cấu hình tốt nhất trên tập kiểm định 2015, rồi đánh giá một lần trên tập kiểm thử 2016 và đối chiếu các ngưỡng nghiệm thu trong `docs/define.md`
+- **Quy trình** — `Quan sát sweep → chọn cấu hình → train 30 epoch → đánh giá 2016 → so sánh + độ trễ → báo cáo`
+- **Trạng thái** — Mô tả ✅ / Sinh mã ✅ / Duyệt ⏳ / Chạy ⏳ / Kiểm thử ⏳ / Gọn mã ⏳ / Chốt ⏳
+- **Ghi chú** — Huấn luyện trên CPU quá chậm (~19 phút/epoch) nên chuyển sang Google Colab GPU. Mọi ô được kiểm tra trước bằng `python notebooks/_verify_nb.py` (tập con, 1–2 epoch) để chắc chắn không lỗi cú pháp/thiếu biến/lỗi biểu đồ.
 
 ## Mô-đun đang làm: Huấn luyện `src/training` (kế tiếp — phần của người tiếp theo)
 

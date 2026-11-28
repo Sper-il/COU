@@ -103,3 +103,48 @@ build_report(run_dir: str) -> str
 # Chạy: python -m src.demo --date 2016-06-15
 # Nạp checkpoint tốt nhất, dự báo 1 ngày mẫu: (144,15) → (144,) kèm hình, latency live ≤ 3 s end-to-end
 ```
+
+## 6. Notebook huấn luyện trên Google Colab
+
+> Tệp: `notebooks/colab_train.ipynb` (sinh bằng `python notebooks/build_colab_notebook.py`).
+> Dùng để huấn luyện trên GPU khi máy cá nhân chỉ có CPU.
+
+```text
+notebooks/
+├── colab_train.ipynb      # notebook Colab: sweep 15 epoch → train 30 epoch → đánh giá
+├── build_colab_notebook.py  # script sinh notebook từ các ô trong _nbcells/
+└── _nbcells/              # nguồn từng ô (md = markdown, py = code) + ORDER.txt
+```
+
+Các ô chính của notebook (21 ô, chạy theo thứ tự từ trên xuống):
+
+| # | Nội dung | Kết quả |
+|---|----------|---------|
+| 1 | Cài thư viện (không cài lại `torch` để giữ CUDA) | In GPU đang dùng |
+| 2 | Clone repo `Sper-il/COU` | Mã nguồn trong `/content/COU` |
+| 3 | Tải dữ liệu Jena | `data/raw/.../jena_climate_2009_2016.csv` |
+| 4 | Cấu hình chung: thiết bị, ngưỡng nghiệm thu, mốc EDA | `DEVICE`, `THRESHOLDS` |
+| 5 | Kiểm tra chia tập + shape lô | `(64,144,15) → (64,144)` |
+| 6 | Đường cơ sở persistence và seasonal-naive | Mốc sàn cần vượt |
+| 7 | Hàm `train_loop` (teacher forcing về 0, cắt chuẩn, dừng sớm) | `history` chi tiết từng epoch |
+| 8 | `evaluate_model` + `print_scoreboard` | Chỉ số °C gốc kèm đạt/không đạt |
+| 9 | `plot_training_curves` — 6 biểu đồ theo dõi train | Loss, MAE, teacher forcing, lr, thời gian, overfit |
+| 10 | `plot_config_comparison` + `plot_learning_curves_grid` | Bảng xếp hạng cấu hình |
+| 11–13 | **Sweep 9 cấu hình × 15 epoch** trên tập kiểm định 2015 | `results/sweep_results.csv` |
+| 14 | Phân tích sweep, chọn cấu hình tốt nhất | `BEST_NAME` |
+| 15 | **Train 30 epoch** với cấu hình tốt nhất | `final_model` |
+| 16 | Quan sát chi tiết + diễn giải tự động | Nhận xét quá khớp / TF về 0 / dừng sớm |
+| 17 | Đánh giá tập kiểm thử 2016 + mẫu tốt/xấu | `results/final_metrics.json` |
+| 18 | So sánh 3 kiến trúc (bảng bắt buộc của đề) | `results/compare_architectures.csv` |
+| 19 | Đo độ trễ suy luận (ngưỡng ≤ 100 ms/mẫu) | `results/latency.csv` |
+| 20 | Tổng kết và đối chiếu ngưỡng nghiệm thu | Bảng kết luận |
+| 21 | Lưu kết quả lên Google Drive | `MyDrive/jena-seq2seq/` |
+
+Kiểm tra các ô chạy được (dùng tập con, 1–2 epoch) trước khi đẩy lên Colab:
+
+```bash
+python notebooks/_verify_nb.py
+```
+
+Quy tắc khi chọn cấu hình: **chỉ chọn trên tập kiểm định 2015**, tập kiểm thử 2016
+giữ lại để đánh giá một lần cuối — tránh rò rỉ thông tin qua việc tinh chỉnh.
